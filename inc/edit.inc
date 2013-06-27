@@ -1,0 +1,1 @@
+<? 	if ($site->AUTH > 1) 		echo '<div id="editpage"><a href="/wysiwyg/?module=' . $module->NAME . '&amp;page=' . $page->NAME . '">Редактировать страницу</a></div>';?>

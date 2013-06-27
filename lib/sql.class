@@ -1,0 +1,57 @@
+<?php
+/***********************************************
+-=Ms Site=-
+
+Автор: Миропольский Михаил <ms@ensk.ru>
+Описание: Класс базы данных
+***********************************************/
+
+class Sql
+{
+	var $SqlConnectId;
+	
+	function Sql()
+	{
+		global $site;
+		
+		$this->SqlConnectId = mysql_connect($site->CONFIG['database']['host'], $site->CONFIG['database']['login'], $site->CONFIG['database']['password']);
+		if (!$this->SqlConnectId) exit (mysql_error());
+		
+		mysql_query("SET character_set_results = 'utf8', character_set_client = 'utf8', character_set_connection = 'utf8', character_set_database = 'utf8', character_set_server = 'utf8'");
+		mysql_query("SET NAMES 'utf8'");
+				
+		if (!mysql_select_db($site->CONFIG['database']['name']))
+		{
+			self::SqlExecute('CREATE DATABASE IF NOT EXISTS ' . $site->CONFIG['database']['name']);
+			mysql_select_db($site->CONFIG['database']['name']);
+			//exit (mysql_error());
+		}
+	}
+	
+	function SqlExecute($sql_query)
+	{
+		$sql_res = mysql_query($sql_query, $this->SqlConnectId);
+		$sql_error = mysql_error();
+		if ($sql_error) exit ($sql_error);
+		
+		return $sql_res;
+	}
+	
+	function SqlGetRows($sql_query)
+	{
+		$result = false;
+		$sql_res = self::SqlExecute($sql_query);
+        while ($row = mysql_fetch_assoc($sql_res)) $result[$row['id']] = $row;
+		
+		return $result;
+	}
+	
+	function SqlGetRow($sql_query)
+	{
+		$result = false;
+		$sql_res = self::SqlExecute($sql_query);
+		$result = mysql_fetch_assoc($sql_res);
+		
+		return $result;
+	}
+}

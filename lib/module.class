@@ -1,0 +1,41 @@
+<?php
+/***********************************************
+-=Ms Site=-
+
+Автор: Миропольский Михаил <ms@ensk.ru>
+Описание: Класс модуля
+***********************************************/
+
+class Module
+{
+	var $CONFIG, $NAME, $TITLE, $URL, $PATH, $URL_DATA, $PATH_DATA, $TABLE_ITEMS, $TABLE_CATS;
+	
+	function Module($name = '')
+	{
+		global $site;
+		
+		$this->NAME = $name;
+
+		//pathes
+		$this->URL = $site->URL . '/' . $this->NAME;
+		$this->PATH = $site->PATH . '/' . $this->NAME;
+		$this->URL_DATA_ITEMS = $site->URL_DATA . '/' . $this->NAME . '/items';
+		$this->PATH_DATA_ITEMS = $site->PATH_DATA . '/' . $this->NAME . '/items';
+		$this->URL_DATA_CATS = $site->URL_DATA . '/' . $this->NAME . '/cats';
+		$this->PATH_DATA_CATS = $site->PATH_DATA . '/' . $this->NAME . '/cats';
+		
+		$this->CONFIG = Site::SiteGetConfig($this->PATH . '/module.ini');
+				
+		$this->TITLE = $this->CONFIG['general']['title'];
+		
+		//database tables
+		if ( isset($this->CONFIG['database']['comment']) && $this->CONFIG['database']['comment'] != '')
+			$this->TABLE_COMMENT = $this->NAME . '_' . $this->CONFIG['database']['comment'];
+		if ( isset($this->CONFIG['database']['item']) && $this->CONFIG['database']['item'] != '')
+			$this->TABLE_ITEMS = $this->NAME . '_' . $this->CONFIG['database']['item'];
+		if ( isset($this->CONFIG['database']['cat']) && $this->CONFIG['database']['cat'] != '')
+			$this->TABLE_CATS = $this->NAME . '_' . $this->CONFIG['database']['cat'];
+		
+		return TRUE;
+	}
+}

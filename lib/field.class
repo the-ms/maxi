@@ -1,0 +1,548 @@
+<?php
+/***********************************************
+-=Ms Site=-
+
+Автор: Миропольский Михаил <ms@ensk.ru>
+Описание: Класс полей
+***********************************************/
+
+class Field
+{	
+	var $FIELDS;
+	
+	function FieldsInit($url)
+	{
+		$config = Site::SiteGetConfig($url);
+	
+		foreach ($config as $sect_id => $sect)
+		{
+			if (!isset($config[$sect_id]['access'])) $config[$sect_id]['access'] = '';
+			if (!isset($config[$sect_id]['error'])) $config[$sect_id]['error'] = '';
+			if (!isset($config[$sect_id]['require'])) $config[$sect_id]['require'] = '0';
+			if (!isset($config[$sect_id]['tip'])) $config[$sect_id]['tip'] = '0';
+			if (!isset($config[$sect_id]['type'])) $config[$sect_id]['type'] = 'string';
+			
+			switch ($config[$sect_id]['type'])
+			{
+				case 'text': 
+					if (!isset($config[$sect_id]['maxlength'])) $config[$sect_id]['maxlength'] = '65535';
+					if (!isset($config[$sect_id]['value'])) $config[$sect_id]['value'] = '';
+					break;
+				case 'price': 
+					if (!isset($config[$sect_id]['maxlength'])) $config[$sect_id]['maxlength'] = '10';
+					if (!isset($config[$sect_id]['value'])) $config[$sect_id]['value'] = '0';
+					break;
+				case 'image': 
+					if (!isset($config[$sect_id]['maxlength'])) $config[$sect_id]['maxlength'] = '255';
+					if (!isset($config[$sect_id]['value'])) $config[$sect_id]['value'] = '';
+					break;
+				case 'file': 
+					if (!isset($config[$sect_id]['maxlength'])) $config[$sect_id]['maxlength'] = '255';
+					if (!isset($config[$sect_id]['value'])) $config[$sect_id]['value'] = '';
+					break;
+				case 'gender': 
+					if (!isset($config[$sect_id]['maxlength'])) $config[$sect_id]['maxlength'] = '1';
+					if (!isset($config[$sect_id]['require'])) $config[$sect_id]['require'] = '1';
+					if (!isset($config[$sect_id]['value'])) $config[$sect_id]['value'] = '1';
+					break;
+				case 'icq': 
+					if (!isset($config[$sect_id]['maxlength'])) $config[$sect_id]['maxlength'] = '10';
+					if (!isset($config[$sect_id]['value'])) $config[$sect_id]['value'] = '0';
+					break;
+				case 'url': 
+					if (!isset($config[$sect_id]['maxlength'])) $config[$sect_id]['maxlength'] = '255';
+					if (!isset($config[$sect_id]['value'])) $config[$sect_id]['value'] = '';
+					break;
+				case 'email': 
+					if (!isset($config[$sect_id]['maxlength'])) $config[$sect_id]['maxlength'] = '255';
+					if (!isset($config[$sect_id]['value'])) $config[$sect_id]['value'] = '';
+					break;
+				case 'user':
+					if (!isset($config[$sect_id]['maxlength'])) $config[$sect_id]['maxlength'] = '10';
+					if (!isset($config[$sect_id]['value'])) $config[$sect_id]['value'] = ( isset($_SESSION['current_user']['id']) ) ? $_SESSION['current_user']['id'] : '';
+					break;
+				case 'ip': 
+					if (!isset($config[$sect_id]['maxlength'])) $config[$sect_id]['maxlength'] = '15';
+					if (!isset($config[$sect_id]['value'])) $config[$sect_id]['value'] = $_SERVER['REMOTE_ADDR'];
+					break;
+				case 'date': 
+					if (!isset($config[$sect_id]['maxlength'])) $config[$sect_id]['maxlength'] = '10';
+					if (!isset($config[$sect_id]['require'])) $config[$sect_id]['require'] = '1';
+					if (!isset($config[$sect_id]['value'])) $config[$sect_id]['value'] = date('Y-m-d');
+					break;
+				case 'access': 
+					if (!isset($config[$sect_id]['maxlength'])) $config[$sect_id]['maxlength'] = '1';
+					if (!isset($config[$sect_id]['require'])) $config[$sect_id]['require'] = '1';
+					if (!isset($config[$sect_id]['value'])) $config[$sect_id]['value'] = '1';
+					break;
+				case 'rate': 
+					if (!isset($config[$sect_id]['maxlength'])) $config[$sect_id]['maxlength'] = '10';
+					if (!isset($config[$sect_id]['require'])) $config[$sect_id]['require'] = '1';
+					if (!isset($config[$sect_id]['value'])) $config[$sect_id]['value'] = '350';
+					break;
+				case 'id':
+					if (!isset($config[$sect_id]['maxlength'])) $config[$sect_id]['maxlength'] = '10';
+					if (!isset($config[$sect_id]['value'])) $config[$sect_id]['value'] = '';
+					break;
+				default: 
+					if (!isset($config[$sect_id]['maxlength'])) $config[$sect_id]['maxlength'] = '255';
+					if (!isset($config[$sect_id]['value'])) $config[$sect_id]['value'] = '';
+			}	
+		}
+		return $config;
+	}
+	
+	function FieldsRead($id, $table)
+	{
+		global $sql;
+		
+		$fields = $sql->SqlGetRow('SELECT * FROM ' . self::FieldPrepare($table) . ' WHERE id=' . self::FieldPrepare($id) . ' ORDER BY id;');
+		
+		foreach ($this->FIELDS as $name => $field)
+		{
+			switch ($field['type'])
+			{
+				case 'password':
+					$fields[$name] = '';
+				break;
+				case 'price':
+					if ($fields[$name] == '0') $fields[$name] = '';
+				break;
+				case 'icq':
+					if ($fields[$name] == '0') $fields[$name] = '';
+				break;
+				case 'date':
+					$fields[$name] = date('d.m.Y', strtotime($fields[$name]));
+				break;
+			}
+			$this->FIELDS[$name]['value'] = $fields[$name];
+		}
+	}
+	
+	function FieldsSet($request)
+	{
+		foreach ($this->FIELDS as $name => $field)
+		{
+			if ( isset($request[$name]) )
+			{	
+				if ($this->FIELDS[$name]['type'] == 'url' && $request[$name] != '')
+				{
+					$this->FIELDS[$name]['value'] = str_replace('http://', '', $this->FIELDS[$name]['value']);
+					$this->FIELDS[$name]['value'] = 'http://' . $this->FIELDS[$name]['value'];
+				}
+				$this->FIELDS[$name]['value'] = self::FieldPrepare($request[$name]);
+			}
+			else
+			{
+				if ($field['type'] == 'icq')
+					$this->FIELDS[$name]['value'] = '';
+				if ($field['type'] == 'date')
+					$this->FIELDS[$name]['value'] = date('d.m.Y', strtotime($field['value']));
+			}
+			if ($field['type'] == 'image' && isset($_FILES[$name]['name']) && $_FILES[$name]['name'] != '')
+			{
+				$this->FIELDS[$name]['value'] = $_FILES[$name]['name'];
+			}
+			if ($field['type'] == 'file' && isset($_FILES[$name]['name']) && $_FILES[$name]['name'] != '')
+			{
+				$this->FIELDS[$name]['value'] = $_FILES[$name]['name'];
+			}
+		}
+		
+		return TRUE;
+	}
+	
+	function FieldsSetFromUser()
+	{
+		foreach ($this->FIELDS as $name => $field)
+			if ( isset($_SESSION['current_user'][$name]) && $_SESSION['current_user'][$name] != '')
+				if ($name == 'name' || $name == 'phone' || $name == 'icq' || $name == 'url' || $name == 'email' || $name == 'city' || $name == 'zip' || $name == 'address' || $name == 'company' || $name == 'occupation')
+					$this->FIELDS[$name]['value'] = $_SESSION['current_user'][$name];
+		
+		return TRUE;
+	}
+	
+	function FieldsValidate()
+	{
+		$result = TRUE;
+		
+		foreach ($this->FIELDS as $name => $field)
+		{
+			$length = strlen($field['value']);
+			
+			//require
+			if ($field['require'] == 1 && $length == 0)
+			{
+				$this->FIELDS[$name]['error'] = 'Заполните поле';
+				continue;
+			}
+			
+			//maxlength
+			if ($length > $field['maxlength'])
+			{
+				$this->FIELDS[$name]['error'] = 'Максимально число символов: ' . $field['maxlength'];
+				continue;
+			}
+						
+			//type			
+			if ($length > 0)
+			{
+				switch ($field['type'])
+				{
+					case 'price':
+						if ( !preg_match('/\d+\,{0,1}\d{0,2}/i', $field['value']) ) $this->FIELDS[$name]['error'] = 'Введите число. Например: 12,54';
+						break;
+					case 'image':
+						if ( !isset($_FILES[$name]) || $_FILES[$name]['error'] == '4' ) break;
+						if ($_FILES[$name]['error']) $this->FIELDS[$name]['error'] = $_FILES['image']['error'];
+						if ($_FILES[$name]['size'] < 1) $this->FIELDS[$name]['error'] = 'Ошибка закачки файла';
+						if ($_FILES[$name]['size'] > 1024*1024) $this->FIELDS[$name]['error'] = 'Максимальный размер файла: ' . 1024*1024;									
+						if ( !Image::ImageType($_FILES[$name]['tmp_name']) ) $this->FIELDS[$name]['error'] = 'Поддерживаются изображения только в форматах jpg, gif и png';
+						break;
+					case 'file':
+						if ( !isset($_FILES[$name]) || $_FILES[$name]['error'] == '4' ) break;
+						if ($_FILES[$name]['error']) $this->FIELDS[$name]['error'] = $_FILES['image']['error'];
+						if ($_FILES[$name]['size'] < 1) $this->FIELDS[$name]['error'] = 'Ошибка закачки файла';
+						if ($_FILES[$name]['size'] > 1024*1024) $this->FIELDS[$name]['error'] = 'Максимальный размер файла: ' . 1024*1024;
+						break;
+					case 'gender':
+						if ( $field['value'] != 1 && $field['value'] != 0 ) $this->FIELDS[$name]['error'] = 'Пол введен неверно';
+						break;
+					case 'icq':
+						if ( !preg_match('/\d{5,10}/i', $field['value']) ) $this->FIELDS[$name]['error'] = 'Введите настоящий номер ICQ';
+						break;
+					case 'url':
+						if ( !@fopen($field['value'], 'r') ) $this->FIELDS[$name]['error'] = 'Введите настоящий адрес сайта';
+						break;
+					case 'email':
+						if ( !preg_match('/\w+@\w+\.\w{2,4}/i', $field['value']) ) $this->FIELDS[$name]['error'] = 'Введите настоящий Email';
+						break;
+					case 'ip':
+						if ( !preg_match('/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/', $field['value']) ) $this->FIELDS[$name]['error'] = 'Введите настоящий IP';
+						break;
+					case 'date': 
+						if ( !preg_match('/\d{2}\.\d{2}\.\d{4}/', $field['value']) ) $this->FIELDS[$name]['error'] = 'Введите дату в формате дд.мм.гггг';
+						break;
+					case 'access':
+						if ( $field['value'] != 1 && $field['value'] != 0 ) $this->FIELDS[$name]['error'] = 'Доступ введен неверно';
+						break;
+					case 'rate':
+						if ( !preg_match('/\d+/', $field['value']) ) $this->FIELDS[$name]['error'] = 'Введите целое число';
+						break;
+					default: 
+				}
+			}
+		}
+		
+		foreach ($this->FIELDS as $name => $field)
+			if ($field['error'] != '') $result = FALSE;
+			
+		return  $result;
+	}
+	
+	function FieldsJSValidate($form_name)
+	{
+		$script = '<script src="js/jquery.validate.js" type="text/javascript"></script>
+		<link type="text/css" href="css/jquery.validate.css" rel="stylesheet"/>
+		<script type="text/javascript">$().ready(function(){$("form[name=\'' . $form_name . '\']").validate({rules : {';		
+		$fields_script = '';
+		foreach ($this->FIELDS as $name => $field)
+		{
+			$fields_script .= $name . ':{';
+			
+			$field_rules = array();
+			if ($field['require'] == 1) $field_rules[] = 'required:true';
+			$field_rules[] = 'maxlength:' . $field['maxlength'];			
+			
+			switch ($field['type'])
+			{
+				case 'password':
+					$field_rules[] = 'equalTo: "#' . $name . '2"';
+					break;
+				case 'price':
+					$field_rules[] = 'number:true';
+					break;
+				case 'image':
+					$field_rules[] = 'accept:"jpg|gif|png"';
+					break;
+				case 'gender':
+					$field_rules[] = 'digits:true,range:[0,1]';
+					break;
+				case 'icq':
+					$field_rules[] = 'digits:true,rangelength: [5, 10]';
+					break;
+				case 'url':					
+					$field_rules[] = 'url:true';
+					break;
+				case 'email':
+					$field_rules[] = 'email:true';
+					break;
+				case 'access':
+					$field_rules[] = 'digits:true,range:[0,1]';
+					break;
+				case 'rate':
+					$field_rules[] = 'digits:true,rangelength: [0, 10]';
+					break;
+				default: 
+			}
+			
+			$fields_script .= implode(',', $field_rules) . '},';
+		}
+		$script .= $fields_script . '},messages : {}});});</script>';
+		
+		return $script;
+	}
+	
+	function FieldView($name, $field)
+	{		
+		//if not user
+		if ($field['access'] == 'admin')
+			if ( !isset($_SESSION['current_user']['access']) || $_SESSION['current_user']['access'] < 2 )
+				return FALSE;
+		$title = '<strong>' . $field['title'] . ':</strong> ';
+		
+		if ($name == 'title')
+		{
+			echo '<h3>' . $field['value'] . '</h3>';
+			return TRUE;
+		}
+		
+		switch ($field['type'])
+		{		
+			case 'text': 
+				echo '<div>' . $title . $field['value'] . '</div>';
+				break;
+			case 'price': 
+				echo '<div>' . $title . $field['value'] . ' руб.</div>';
+				break;
+			case 'gender': 
+				echo '<div>' . $title;
+				echo ($field['value'] == 1) ? 'Мужской' : 'Женский';
+				echo '</div>';
+				break;
+			case 'url': 
+				echo '<div><a href="' . $field['value'] . '" target="_blank">' . $field['value'] . '</a></div>';
+				break;
+			case 'email': 
+				echo '<div><a href="mailto:' . $field['value'] . '">' . $field['value'] . '</a></div>';
+				break;
+			case 'date': 
+				echo '<div>' . date('d.m.Y', strtotime($field['value'])) . '</div>';
+				break;
+			case 'access': 
+				echo '<div>' . $title;
+				echo ($field['value'] == 1) ? 'Разрешен' : 'Запрещен';
+				echo '</div>';
+				break;
+			default:
+				echo '<div>' . $title . $field['value'] . '</div>';
+		}	
+		
+		return TRUE;
+	}
+	
+	function FieldViewInput($name, $field)
+	{		
+		//if not user
+		if ($field['access'] == 'admin')
+			if ( !isset($_SESSION['current_user']['access']) || $_SESSION['current_user']['access'] < 2 )
+				return FALSE;
+		
+		//label
+		echo '<label>';
+		if ($field['require'] == 1) echo '<span class="error">*</span> ';
+		echo $field['title'] . ':</label>';		
+		
+		//input
+		switch ($field['type'])
+		{
+			case 'password':
+				echo '<a href="#" id="passwordLink">Ввести пароль</a>';
+				echo '<div id="passwordBlock">';
+				echo '<input id="' . $name . '2" name="' . $name . '2" 
+							 type="password" 
+							 maxlength="' . $field['maxlength'] . '"  
+							 value="' . htmlspecialchars($field['value'], ENT_QUOTES) . '"/>';
+				echo '<label>';
+				if ($field['require'] == 1) echo '<span class="error">*</span> ';
+				echo $field['title'] . ' еще раз:</label>';	
+				echo '<input name="' . $name . '" 
+							 type="password" 
+							 maxlength="' . $field['maxlength'] . '"  
+							 value="' . htmlspecialchars($field['value'], ENT_QUOTES) . '"/>';
+				echo '</div>';
+				break;
+			case 'text':
+				echo '<textarea name="' . $name . '" rows="10" cols="17">' . htmlspecialchars($field['value'], ENT_QUOTES) . '</textarea>';
+				break;
+			case 'price':
+				$value = ($field['value'] == 0) ? '' : htmlspecialchars($field['value'], ENT_QUOTES);
+				echo '<input name="' . $name . '" 
+							 type="text" 
+							 maxlength="' . $field['maxlength'] . '"  
+							 value="' . $value . '"/>';
+				break;
+			case 'image':
+				echo '<input name="' . $name . '" type="file" class="autowidth"/>';
+				break;
+			case 'file':
+				echo '<input name="' . $name . '" type="file" class="autowidth"/>';
+				break;
+			case 'gender':
+				echo '<select name="' . $name . '">';
+					echo '<option value="1"';
+						if ($field['value'] == 1) echo ' selected=""';
+					echo '>Мужской</option>';
+					echo '<option value="0"';
+						if ($field['value'] == 0) echo ' selected="selected"';
+					echo '>Женский</option>';
+				echo '</select>';
+					break;
+			case 'icq':
+				$value = ($field['value'] == 0) ? '' : htmlspecialchars($field['value'], ENT_QUOTES);
+				echo '<input name="' . $name . '" 
+							 type="text" 
+							 maxlength="' . $field['maxlength'] . '"  
+							 value="' . $value . '"/>'; 
+				break;
+			case 'url':
+				echo '<input name="' . $name . '" 
+							 type="text" 
+							 maxlength="' . $field['maxlength'] . '"  
+							 value="' . htmlspecialchars($field['value'], ENT_QUOTES) . '"/>';
+				break;
+			case 'email':
+				echo '<input name="' . $name . '" 
+							 type="text" 
+							 maxlength="' . $field['maxlength'] . '"  
+							 value="' . htmlspecialchars($field['value'], ENT_QUOTES) . '"/>';
+				break;
+			case 'ip':
+				echo '<input name="' . $name . '" 
+							 type="text" 
+							 maxlength="' . $field['maxlength'] . '"  
+							 value="' . htmlspecialchars($field['value'], ENT_QUOTES) . '"/>';
+				break;
+			case 'date':
+				echo '<input name="' . $name . '" 
+							 type="text" 
+							 maxlength="' . $field['maxlength'] . '"  
+							 value="' . date('d.m.Y', strtotime($field['value'])) . '" size="10" class="autowidth datepicker"/>';
+				break;
+			case 'access':
+				echo '<select name="' . $name . '">';
+					echo '<option value="1"';
+						if ($field['value'] == 1) echo ' selected=""';
+					echo '>Разрешен</option>';
+					echo '<option value="0"';
+						if ($field['value'] == 0) echo ' selected="selected"';
+					echo '>Запрещен</option>';
+				echo '</select>';
+					break;
+			case 'rate':
+				echo '<input name="' . $name . '" 
+							 type="text" 
+							 maxlength="' . $field['maxlength'] . '"  
+							 value="' . htmlspecialchars($field['value'], ENT_QUOTES) . '"/>';
+				break;
+			default:
+				echo '<input name="' . $name . '" 
+							 type="text" 
+							 maxlength="' . $field['maxlength'] . '"  
+							 value="' . htmlspecialchars($field['value'], ENT_QUOTES) . '"/>';
+		}
+		
+		if ($field['tip'] == '1') echo ' <a name="' . $field['title'] . '" id="' . $name . 'Tip" class="jTip" href="/ajax/tips/' . $name . '.htm?width=400">?</a>';
+		if ($field['error'] != '') echo '<div class="error">' . $field['error'] . '</div>';
+		
+		return TRUE;
+	}
+	
+	function FieldsSavePrepare()
+	{		
+		foreach ($this->FIELDS as $name => $field)
+		{
+			switch ($field['type'])
+			{
+				case 'password':
+					$this->FIELDS[$name]['value'] = md5($this->FIELDS[$name]['value']);
+					break;
+				case 'price':
+					if ($field['value'] == '') $this->FIELDS[$name]['value'] = '0';
+					break;
+				case 'icq':
+					if ($field['value'] == '') $this->FIELDS[$name]['value'] = '0';
+					break;
+				case 'date':
+					$this->FIELDS[$name]['value'] = date('Y-m-d', strtotime($field['value']));
+					 break;
+			}
+			if (!get_magic_quotes_gpc()) $this->FIELDS[$name]['value'] = mysql_real_escape_string($this->FIELDS[$name]['value']);
+		}
+		
+		return TRUE;
+	}
+	
+	function FieldsSave($table)
+	{
+		global $sql;
+		
+		$fields = array();
+		$values = array();
+		
+		self::FieldsSavePrepare();
+			
+		foreach ($this->FIELDS as $name => $field)
+		{
+			$fields[] = $name;
+			$values[] = '"' . $field['value'] . '"';
+		}
+			
+		$sql->SqlExecute('INSERT IGNORE INTO `' . $table . '` (' . implode($fields, ',') . ') VALUES (' . implode($values, ',') . ');');
+		
+		return TRUE;
+	}
+	
+	function FieldsUpdate($id, $table)
+	{
+		global $sql;
+		
+		$fields = array();
+		
+		self::FieldsSavePrepare();
+			
+		foreach ($this->FIELDS as $name => $field)
+		{
+			if ( $field['type'] == 'password' && $field['value'] == md5('') ) continue;
+			$fields[] = $name . '="' . $field['value'] . '"';
+		}
+		
+		$sql->SqlExecute('UPDATE `' . $table . '` SET ' . implode($fields, ',') . ' WHERE id="' . $id . '";');
+		
+		return TRUE;
+	}
+	
+	function FieldsMail($email, $title)
+	{
+		$message = '';
+		foreach ($this->FIELDS as $name => $field)
+		{
+			$message .= $field['title'] . ': ' . $field['value'] . "\r\n";
+		}
+		
+		return Mail::Mailer($email, $title, $message);
+		
+	}
+	
+	function FieldPrepare($string, $mode = 'text')
+	{		
+		if ( !isset($_SESSION['current_user']['access']) || $_SESSION['current_user']['access'] < 2 )
+		{
+			$string = strip_tags($string);
+			$string = htmlspecialchars($string);
+			$string = trim($string);
+		}		
+		
+		return $string;
+	}
+}

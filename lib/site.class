@@ -1,0 +1,82 @@
+<?php
+/***********************************************
+-=Ms Site=-
+
+Автор: Миропольский Михаил <ms@ensk.ru>
+Описание: Класс основного движка
+***********************************************/
+ini_set('magic_quotes_gpc', 0);
+ini_set('display_errors', 1);
+
+class Site
+{
+	var $CONFIG, $TITLE, $URL, $PATH, $URL_DATA, $PATH_DATA, $PATH_TPL, $PATH_INC, $EMAIL_OWNER, $EMAIL_ADMIN;
+	var $AUTH = 0;
+	
+	function Site()
+	{
+		$this->CONFIG = $this->SiteGetConfig($_SERVER["DOCUMENT_ROOT"] . '/site.ini');
+		
+		$this->TITLE = $this->CONFIG['general']['title'];
+		$this->EMAIL_OWNER = $this->CONFIG['general']['owner'];
+		$this->EMAIL_ADMIN = $this->CONFIG['general']['admin'];		
+		
+		//session
+		if ( !isset($_SESSION) ) session_start();	
+		if ( !isset($_SESSION['current_user']) ) $_SESSION['current_user'] = array ('id' => 0, 'title' => 'Гость', 'access' => '0');
+		$this->AUTH = $_SESSION['current_user']['access'];
+		
+		//pathes
+		$this->URL = 'http://' . $_SERVER['HTTP_HOST'];
+		$this->PATH = $_SERVER["DOCUMENT_ROOT"];		
+		if ($this->CONFIG['general']['path'] != '')
+		{
+			 $this->URL .= '/' . $this->CONFIG['general']['path'];
+			 $this->PATH .= '/' . $this->CONFIG['general']['path'];
+		}
+		$this->URL_DATA = $this->URL . '/' . $this->CONFIG['general']['data'];
+		$this->PATH_DATA = $this->PATH . '/' . $this->CONFIG['general']['data'];
+		$this->PATH_INC = $this->PATH . '/' . $this->CONFIG['general']['include'];
+		$this->PATH_TPL = $this->PATH . '/' . $this->CONFIG['general']['template'];
+		
+		return TRUE;
+	}
+	
+	function SiteGetConfig($url)
+	{
+		$config = parse_ini_file ($url, true);
+		
+		/*
+		foreach ($config as $sect_id => $sect)
+		{
+			foreach ($sect as $item_id => $item)
+			{
+				if (strpos($item_id, '.'))
+				{
+					$subitems = explode('.', $item_id);
+					$array[$subitems[0]][$subitems[1]] = $item;				
+					$config[$sect_id] = $array;
+				}
+			}
+		}
+		*/
+		
+		return $config;
+	}
+	
+	function SiteGoTo($url)
+	{
+		header('Location: ' . $url);
+		exit();
+		
+		return TRUE;
+	}
+	
+	function SiteOk($url)
+	{	
+		//if ( $this->AUTH > 1) self::SiteGoTo($url);
+		self::SiteGoTo($this->URL . '/ok/');
+		
+		return TRUE;
+	}
+}

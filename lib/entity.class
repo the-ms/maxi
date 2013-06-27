@@ -1,0 +1,32 @@
+<?php
+/***********************************************
+-=Ms Site=-
+
+Автор: Миропольский Михаил <ms@ensk.ru>
+Описание: Класс объекта
+***********************************************/
+require_once('field.class');
+
+class Entity extends Field
+{		
+	function Entity($url)
+	{
+		$this->FIELDS = $this->FieldsInit($url);
+		return TRUE;
+	}
+	
+	function EntityId($entity_id, $table = false)
+	{
+		if ( !isset($_REQUEST[$entity_id]) ) return FALSE;		
+		$id = $_REQUEST[$entity_id];		
+		if ( !preg_match('/\d+/', $id) ) return FALSE;
+		
+		if ($table)
+		{
+			global $sql;
+			if ( !$sql->SqlGetRow('SELECT id FROM ' . $table) )  return FALSE;
+		}
+		
+		return $id;
+	}
+}
